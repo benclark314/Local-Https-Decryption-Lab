@@ -1,0 +1,498 @@
+Base Install:
+Open a terminal. Use root permissions by typing the following command. Default password is "kali":
+┌──(kali㉿kali)-[~]
+└─$ sudo -i
+[sudo] password for kali: 
+
+
+Update the package listings:
+┌──(root㉿kali)-[~]
+└─# apt-get update
+Get:1 http://kali.darklab.sh/kali kali-rolling InRelease [41.2 kB]
+Get:2 http://kali.darklab.sh/kali kali-rolling/main amd64 Packages [19.4 MB]
+Get:3 http://kali.darklab.sh/kali kali-rolling/main amd64 Contents (deb) [45.0 MB]
+Get:4 http://kali.darklab.sh/kali kali-rolling/contrib amd64 Packages [116 kB]
+Get:5 http://kali.darklab.sh/kali kali-rolling/contrib amd64 Contents (deb) [172 kB]                                                                                                                                                       
+Get:6 http://kali.darklab.sh/kali kali-rolling/non-free amd64 Packages [217 kB]                                                                                                                                                            
+Get:7 http://kali.darklab.sh/kali kali-rolling/non-free amd64 Contents (deb) [927 kB]                                                                                                                                                      
+Fetched 65.9 MB in 10s (6,378 kB/s)                                                                                                                                                                                                        
+Reading package lists... Done
+
+
+MySql comes pre-installed, as shown below:
+┌──(root㉿kali)-[~]
+└─# mysql --version
+mysql  Ver 15.1 Distrib 10.11.2-MariaDB, for debian-linux-gnu (x86_64) using  EditLine wrapper
+
+
+Install mariadb-server (this version of Kali appears to already have it installed):
+┌──(root㉿kali)-[~]
+└─# apt install mariadb-server
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+mariadb-server is already the newest version (1:10.11.2-1).
+mariadb-server set to manually installed.
+0 upgraded, 0 newly installed, 0 to remove and 235 not upgraded.
+
+
+Start mysql:
+┌──(root㉿kali)-[~]
+└─# systemctl start mysql 
+
+
+┌──(root㉿kali)-[~]
+└─# mysql_secure_installation
+[press enter for the first prompt, and then answer no for all others]
+
+
+Enable mysql:
+┌──(root㉿kali)-[~]
+└─# systemctl enable mysql 
+Created symlink /etc/systemd/system/multi-user.target.wants/mariadb.service → /lib/systemd/system/mariadb.service.
+
+
+Install php:
+┌──(root㉿kali)-[~]
+└─# apt install php libapache2-mod-php php-mysql
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+php is already the newest version (2:8.2+93).
+php set to manually installed.
+libapache2-mod-php is already the newest version (2:8.2+93).
+libapache2-mod-php set to manually installed.
+php-mysql is already the newest version (2:8.2+93).
+php-mysql set to manually installed.
+0 upgraded, 0 newly installed, 0 to remove and 235 not upgraded.
+
+
+Move index.php to the second position of dir.conf (enables php to show at index):
+If you're unfamiliar with nano, here's how you save:
+Press ctrl-x to exit
+Press y for yes (to save modified buffer)
+Press enter:
+┌──(root㉿kali)-[~]
+└─# nano /etc/apache2/mods-enabled/dir.conf
+Should look like this:
+    DirectoryIndex index.php index.html index.cgi index.pl index.xhtml index.htm
+
+
+Make a website folder:
+┌──(root㉿kali)-[~]
+└─# mkdir /var/www/bsides    
+
+                            
+Assign ownership to the $USER environment variable, the current system user:							
+┌──(root㉿kali)-[~]
+└─# chown -R $USER:$USER /var/www/bsides
+
+                                                                                                                       
+┌──(root㉿kali)-[~]
+└─# nano /etc/apache2/sites-available/bsides.conf   
+Paste this:
+<VirtualHost *:80>
+    ServerName bsides
+    ServerAlias www.bsides 
+    ServerAdmin webmaster@localhost
+    DocumentRoot /var/www/bsides
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+
+
+Enable the site:
+┌──(root㉿kali)-[~]
+└─# a2ensite bsides     
+Enabling site bsides.
+To activate the new configuration, you need to run:
+  systemctl reload apache2
+
+
+Disable the default site:
+┌──(root㉿kali)-[~]
+└─# a2dissite 000-default
+Site 000-default disabled.
+To activate the new configuration, you need to run:
+  systemctl reload apache2
+
+
+You can run a config test if you want:
+┌──(root㉿kali)-[~]
+└─# apache2ctl configtest                       
+AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 127.0.1.1. Set the 'ServerName' directive globally to suppress this message
+Syntax OK
+
+
+Create default php page:
+┌──(root㉿kali)-[~]
+└─# nano /var/www/bsides/info.php
+Paste this:
+<?php
+phpinfo();
+
+
+Start Apache server:
+┌──(root㉿kali)-[~]
+└─# systemctl start apache2
+
+
+Make sure it's running:
+┌──(root㉿kali)-[~]
+└─# systemctl status apache2
+● apache2.service - The Apache HTTP Server
+     Loaded: loaded (/lib/systemd/system/apache2.service; disabled; preset: disabled)
+     Active: active (running) since Sat 2023-03-25 01:20:13 EDT; 19s ago
+       Docs: https://httpd.apache.org/docs/2.4/
+    Process: 9520 ExecStart=/usr/sbin/apachectl start (code=exited, status=0/SUCCESS)
+   Main PID: 9545 (apache2)
+      Tasks: 6 (limit: 2271)
+     Memory: 19.4M
+        CPU: 55ms
+     CGroup: /system.slice/apache2.service
+             ├─9545 /usr/sbin/apache2 -k start
+             ├─9547 /usr/sbin/apache2 -k start
+             ├─9548 /usr/sbin/apache2 -k start
+             ├─9549 /usr/sbin/apache2 -k start
+             ├─9550 /usr/sbin/apache2 -k start
+             └─9551 /usr/sbin/apache2 -k start
+
+Mar 25 01:20:12 kali systemd[1]: Starting apache2.service - The Apache HTTP Server...
+Mar 25 01:20:13 kali apachectl[9536]: AH00558: apache2: Could not reliably determine the server's fully qualified doma>
+Mar 25 01:20:13 kali systemd[1]: Started apache2.service - The Apache HTTP Server.
+
+
+You can get your localhost ip using the following command:
+┌──(kali㉿kali)-[~]
+└─$ ip addr show eth0 | grep inet | awk '{ print $2; }' | sed 's/\/.*$//'
+10.0.2.15
+fe80::3b6:acde:8d14:fd50
+
+
+Open Firefox and go to 10.0.2.15 or localhost to verify the server is running.
+Now, add https:// to the beginning, and verify that you cannot connect because an error occurred:
+You should now be at the first snapshot of this virtual machine, "Installed LAMP stack"
+
+
+--------------------------------------------------------------------------------------
+
+
+Create a self-signed key and certificate pair:
+┌──(root㉿kali)-[~]
+└─# openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/apache-selfsigned.key -out /etc/ssl/certs/apache-selfsigned.crt
+[sudo] password for kali: 
+...+...+...+.+...+..+......+...+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*.....+.+...+............+....................+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*.+.+..............+.......+.................+.+......+...+...+.....+...+.......+...............+...+.....+.+.....+.+..+............+......+...............+.......+.....+.+.....+....+...........+.+..............+.+......+..+.+.....+....+........+...+....+......+.....+....+..+...+............+.........+.+........+.+..+...+.+......+..............+......+...+....+........+....+......+.....+.........+..........+.........+..+....+.........+..+.......+...+........+.+......+........+....+..+.+........+.+...+.................+.+.....+.........+...+..........+.....+.+..+.........................+.....+....+..............+.+.....+.+............+..+....+..+....+...+..+....+...............+.........+...+..+.+............+..+............+.+..+.......+...........+...+......+..................+.......+......+...+.....+.........+.+............+............+........+.........+.+............+..+...................+..+.......+...+.....+...+.........................+.....+.+...+.....+...+...............+...+..........+...........+....+.....+.+........+.............+...+.....+.+.....+...............+.+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+.......+..+....+..+.........+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*....+......+.......+..+.+......+........+...+....+...+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*.....+...+......+.+..+.......+...+..+...+......+.......+...+.........+..+...............+......+...............+....+......+........+....+.....+.+...........+.........+....+...+.........+......+...............+.........+.....+.+..+...+..........+.....+.........+.+...+......+...+......+.........+...........+......+..........+......+........+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:North Dakota
+Locality Name (eg, city) []:Fargo
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:NDSU
+Organizational Unit Name (eg, section) []:Cybersecurity
+Common Name (e.g. server FQDN or YOUR name) []:Cyber Club
+Email Address []:benjamin.clark.3@ndus.edu
+
+
+Set apache SSL params:
+┌──(root㉿kali)-[~]
+└─# nano /etc/apache2/conf-available/ssl-params.conf 
+Paste the following (you can do this by pressing shift + ins):
+SSLCipherSuite EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH
+SSLProtocol All -SSLv2 -SSLv3 -TLSv1 -TLSv1.1
+SSLHonorCipherOrder On
+# Disable preloading HSTS for now.  You can use the commented out header line that includes
+# the "preload" directive if you understand the implications.
+# Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+Header always set X-Frame-Options DENY
+Header always set X-Content-Type-Options nosniff
+# Requires Apache >= 2.4
+SSLCompression off
+SSLUseStapling on
+SSLStaplingCache "shmcb:logs/stapling-cache(150000)"
+# Requires Apache >= 2.4.11
+SSLSessionTickets Off
+
+
+Modify ssl virtual host file:
+sudo nano /etc/apache2/sites-available/default-ssl.conf
+<VirtualHost *:443>
+        ServerAdmin benjamin.clark.3@ndus.edu<--------------------------------------------------------------------------------
+        ServerName bsides<--------------------------------------------------------------------------------
+
+        DocumentRoot /var/www/html
+
+        # Available loglevels: trace8, ..., trace1, debug, info, notice, warn,
+        # error, crit, alert, emerg.
+        # It is also possible to configure the loglevel for particular
+        # modules, e.g.
+        #LogLevel info ssl:warn
+
+        ErrorLog ${APACHE_LOG_DIR}/error.log
+        CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+        # For most configuration files from conf-available/, which are
+        # enabled or disabled at a global level, it is possible to
+        # include a line for only one particular virtual host. For example the
+        # following line enables the CGI configuration for this host only
+        # after it has been globally disabled with "a2disconf".
+
+        #Include conf-available/serve-cgi-bin.conf
+
+        #   SSL Engine Switch:
+        #   Enable/Disable SSL for this virtual host.
+        SSLEngine on
+
+        #   A self-signed (snakeoil) certificate can be created by installing
+        #   the ssl-cert package. See
+        #   /usr/share/doc/apache2/README.Debian.gz for more info.
+        #   If both key and certificate are stored in the same file, only the
+        #   SSLCertificateFile directive is needed.
+        SSLCertificateFile      /etc/ssl/certs/apache-selfsigned.crt<--------------------------------------------------------------------------------
+        SSLCertificateKeyFile   /etc/ssl/private/apache-selfsigned.key<--------------------------------------------------------------------------------
+
+        #   Server Certificate Chain:
+        #   Point SSLCertificateChainFile at a file containing the
+        #   concatenation of PEM encoded CA certificates which form the
+        #   certificate chain for the server certificate. Alternatively
+        #   the referenced file can be the same as SSLCertificateFile
+        #   when the CA certificates are directly appended to the server
+        #   certificate for convinience.
+        #SSLCertificateChainFile /etc/apache2/ssl.crt/server-ca.crt
+
+        #   Certificate Authority (CA):
+        #   Set the CA certificate verification path where to find CA
+        #   certificates for client authentication or alternatively one
+        #   huge file containing all of them (file must be PEM encoded)
+        #   Note: Inside SSLCACertificatePath you need hash symlinks
+        #         to point to the certificate files. Use the provided
+        #         Makefile to update the hash symlinks after changes.
+        #SSLCACertificatePath /etc/ssl/certs/
+        #SSLCACertificateFile /etc/apache2/ssl.crt/ca-bundle.crt
+
+        #   Certificate Revocation Lists (CRL):
+        #   Set the CA revocation path where to find CA CRLs for client
+        #   authentication or alternatively one huge file containing all
+        #   of them (file must be PEM encoded)
+        #   Note: Inside SSLCARevocationPath you need hash symlinks
+        #         to point to the certificate files. Use the provided
+        #         Makefile to update the hash symlinks after changes.
+        #SSLCARevocationPath /etc/apache2/ssl.crl/
+        #SSLCARevocationFile /etc/apache2/ssl.crl/ca-bundle.crl
+
+        #   Client Authentication (Type):
+        #   Client certificate verification type and depth.  Types are
+        #   none, optional, require and optional_no_ca.  Depth is a
+        #   number which specifies how deeply to verify the certificate
+        #   issuer chain before deciding the certificate is not valid.
+        #SSLVerifyClient require
+        #SSLVerifyDepth  10
+
+        #   SSL Engine Options:
+        #   Set various options for the SSL engine.
+        #   o FakeBasicAuth:
+        #    Translate the client X.509 into a Basic Authorisation.  This means that
+        #    the standard Auth/DBMAuth methods can be used for access control.  The
+        #    user name is the `one line' version of the client's X.509 certificate.
+        #    Note that no password is obtained from the user. Every entry in the user
+        #    file needs this password: `xxj31ZMTZzkVA'.
+        #   o ExportCertData:
+        #    This exports two additional environment variables: SSL_CLIENT_CERT and
+        #    SSL_SERVER_CERT. These contain the PEM-encoded certificates of the
+        #    server (always existing) and the client (only existing when client
+        #    authentication is used). This can be used to import the certificates
+        #    into CGI scripts.
+        #   o StdEnvVars:
+        #    This exports the standard SSL/TLS related `SSL_*' environment variables.
+        #    Per default this exportation is switched off for performance reasons,
+        #    because the extraction step is an expensive operation and is usually
+        #    useless for serving static content. So one usually enables the
+        #    exportation for CGI and SSI requests only.
+        #   o OptRenegotiate:
+        #    This enables optimized SSL connection renegotiation handling when SSL
+        #    directives are used in per-directory context.
+        #SSLOptions +FakeBasicAuth +ExportCertData +StrictRequire
+        <FilesMatch "\.(?:cgi|shtml|phtml|php)$">
+                SSLOptions +StdEnvVars
+        </FilesMatch>
+        <Directory /usr/lib/cgi-bin>
+                SSLOptions +StdEnvVars
+        </Directory>
+
+        #   SSL Protocol Adjustments:
+        #   The safe and default but still SSL/TLS standard compliant shutdown
+        #   approach is that mod_ssl sends the close notify alert but doesn't wait for
+        #   the close notify alert from client. When you need a different shutdown
+        #   approach you can use one of the following variables:
+        #   o ssl-unclean-shutdown:
+        #    This forces an unclean shutdown when the connection is closed, i.e. no
+        #    SSL close notify alert is send or allowed to received.  This violates
+        #    the SSL/TLS standard but is needed for some brain-dead browsers. Use
+        #    this when you receive I/O errors because of the standard approach where
+        #    mod_ssl sends the close notify alert.
+        #   o ssl-accurate-shutdown:
+        #    This forces an accurate shutdown when the connection is closed, i.e. a
+        #    SSL close notify alert is send and mod_ssl waits for the close notify
+        #    alert of the client. This is 100% SSL/TLS standard compliant, but in
+        #    practice often causes hanging connections with brain-dead browsers. Use
+        #    this only for browsers where you know that their SSL implementation
+        #    works correctly.
+        #   Notice: Most problems of broken clients are also related to the HTTP
+        #   keep-alive facility, so you usually additionally want to disable
+        #   keep-alive for those clients, too. Use variable "nokeepalive" for this.
+        #   Similarly, one has to force some clients to use HTTP/1.0 to workaround
+        #   their broken HTTP/1.1 implementation. Use variables "downgrade-1.0" and
+        #   "force-response-1.0" for this.
+        # BrowserMatch "MSIE [2-6]" \
+        #       nokeepalive ssl-unclean-shutdown \
+        #       downgrade-1.0 force-response-1.0
+
+</VirtualHost>
+
+
+Default redirect to our site:
+┌──(root㉿kali)-[~]
+└─# nano /etc/apache2/sites-available/000-default.conf
+Add the following line at the beginning:
+Redirect "/" "https://bsides/"
+
+
+Setup ssl:
+┌──(root㉿kali)-[~]
+└─# a2enmod ssl                                  
+Considering dependency setenvif for ssl:
+Module setenvif already enabled
+Considering dependency mime for ssl:
+Module mime already enabled
+Considering dependency socache_shmcb for ssl:
+Enabling module socache_shmcb.
+Enabling module ssl.
+See /usr/share/doc/apache2/README.Debian.gz on how to configure SSL and create self-signed certificates.
+To activate the new configuration, you need to run:
+  systemctl restart apache2
+
+
+┌──(root㉿kali)-[~]
+└─# a2enmod headers 
+Enabling module headers.
+To activate the new configuration, you need to run:
+  systemctl restart apache2
+
+
+┌──(root㉿kali)-[~]
+└─# a2ensite default-ssl
+Enabling site default-ssl.
+To activate the new configuration, you need to run:
+  systemctl reload apache2
+
+
+Enable your ssl-params.conf file to read in the values you’ve set:
+┌──(root㉿kali)-[~]
+└─# a2enconf ssl-params                             
+Enabling conf ssl-params.
+To activate the new configuration, you need to run:
+  systemctl reload apache2
+
+
+┌──(root㉿kali)-[~]
+└─# systemctl restart apache2
+
+
+Now, go back to Firefox, and manually type the "https" in front of localhost:
+https://localhost
+Click "advanced," accept the risk and continue.
+You should now be at the second snapshot of this virtual machine, "Created SSL Certificate, setup HTTPS"
+
+
+--------------------------------------------------------------------------------------
+
+
+Begin logging your ssl keys using mitm:
+┌──(root㉿kali)-[~]
+└─# SSLKEYLOGFILE="$PWD/.mitmproxy/sslkeylogfile.txt" mitmproxy
+
+
+Open Firefox, and go to
+http://mitm.it/#Firefox
+It should say, "If you can see this, traffic is not passing through mitmproxy."
+
+
+Firefox -> settings -> Type "network settings," and click "Settings"
+Select the "Manual proxy configuration" radio button.
+In the "HTTP Proxy" field, type localhost, and add port 8080
+Check "also use this proxy for HTTPS"
+Click Ok
+
+
+Go back to Firefox, and refresh the page, "http://mitm.it/#Firefox"
+It should now give you mitmproxy's certificate authority.
+Download the one for Firefox.
+Firefox -> settings -> type "certificates"
+View Certificates
+Import
+Select the certificate you just downloaded.
+Check "Trust this CA to identify websites"
+Click Ok
+
+
+Go back to the terminal where you typed: SSLKEYLOGFILE="$PWD/.mitmproxy/sslkeylogfile.txt" mitmproxy
+Notice that it is monitoring traffic and logging the session keys.
+You should now be at the third snapshot of this virtual machine, "Set up MITM proxy"
+
+
+--------------------------------------------------------------------------------------
+
+Open Wireshark
+Double-click Loopback:lo
+
+
+Ensure that a terminal is open where the following is running:
+SSLKEYLOGFILE="$PWD/.mitmproxy/sslkeylogfile.txt" mitmproxy
+
+
+Ensure Firefox is open to https://localhost
+
+
+In Wireshark, Edit -> Preferences -> Protocols -> TLS -> Edit RSA keys list
+Fill in your ip address (should be 10.0.2.15). Port 8080. Protocol TLS
+Browse to your key file. In the navigator, right-click and check "Show Hidden Files"
+The key file is in .mitmproxy, mitmproxy-ca.pem
+Click Ok.
+In the (Pre)-Master-Secret log filename, browse to /home/kali/.mitmproxy/sslkeylogfile.txt
+Click Ok.
+
+
+Note the "Decrypted TLS (2 bytes)" option now availble in the Wireshark tray.
+
+
+Congratulations! You've just decrypted your own localhost HTTPS traffic.
+
+
+Some sources, if you're new to this kind of thing (...or you can just Google the subject):
+https://www.digitalocean.com/community/tutorials/initial-server-setup-with-debian-10
+https://www.digitalocean.com/community/tutorials/how-to-install-linux-apache-mariadb-php-lamp-stack-on-debian-10
+https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-apache-in-debian-10
+https://docs.mitmproxy.org/stable/howto-wireshark-tls/
+https://www.youtube.com/watch?v=a9eVf2uleaA
+https://www.youtube.com/watch?v=x2Y_umUxM5k
+https://www.youtube.com/watch?v=cDBRwNJCDAM
+https://www.youtube.com/watch?v=5qecyZHL-GU
+https://www.youtube.com/watch?v=T4Df5_cojAs
+https://www.ssls.com/blog/how-to-find-your-private-key/#:~:text=While%20the%20Auto%2Dactivate%20method,where%20your%20website%20is%20stored
+https://www.digicert.com/blog/where-is-your-private-key
+https://www.cloudflare.com/learning/ssl/what-happens-in-a-tls-handshake/
+https://knowledgebase.paloaltonetworks.com/KCSArticleDetail?id=kA14u000000HB8gCAG&lang=en_US%E2%80%A9
+https://www.techtarget.com/searchsecurity/definition/certificate-authority#:~:text=When%20a%20web%20browser%20initiates,its%20own%20root%20certificate%20store
+https://www.globalsign.com/en/blog/what-is-a-certificate-signing-request-csr
+https://sucuri.net/guides/how-to-install-ssl-certificate/
+https://learn.microsoft.com/en-us/answers/questions/792999/how-to-completely-delete-a-certificate-from-a-user
+
+Some more interesting, in-depth sources:
+https://pomcor.com/2017/06/02/keys-in-browser/
+https://source.chromium.org/chromium/chromium/src/+/main:third_party/boringssl/src/ssl/handshake_client.cc;l=1353
